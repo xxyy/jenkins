@@ -872,44 +872,33 @@ var createPluginSetupWizard = function(appendTarget) {
 			$c.slideDown();
 		}
 	};
-	
-	var handleStaplerSubmit = function(data) {
-		if(data.status && data.status > 200) {
-			// Nothing we can really do here
-			setPanel(errorPanel, { errorMessage: data.statusText });
-			return;
-		}
-		
-		try {
-			if(JSON.parse(data).status === 'ok') {
-				showStatePanel();
-				return;
-			}
-		} catch(e) {
-			// ignore JSON parsing issues, this may be HTML
-		}
-		// we get 200 OK
-		var $page = $(data);
-		var $errors = $page.find('.error');
-		if($errors.length > 0) {
-			var $main = $page.find('#main-panel').detach();
-			if($main.length > 0) {
-				data = data.replace(/body([^>]*)[>](.|[\r\n])+[<][/]body/,'body$1>'+$main.html()+'</body');
-			}
-			var doc = $('iframe[src]').contents()[0];
-			doc.open();
-			doc.write(data);
-			doc.close();
-		}
-		else {
+
+	var handleFirstUserResponseSuccess = function (data) {
+		if (data.status === 'ok') {
 			showStatePanel();
+		} else {
+			setPanel(errorPanel, {errorMessage: 'Error trying to create first user: ' + data.statusText});
 		}
+	};
+
+	var handleFirstUserResponseError = function(res) {
+		// We're expecting a full HTML page to replace the form
+		// We can only replace the _whole_ iframe due to XSS rules
+		// https://stackoverflow.com/a/22913801/1117552
+		var $newFrame = $('<iframe class="setup-first-user"></iframe>');
+		$container.find('iframe.setup-first-user').replaceWith($newFrame);
+		var doc = $newFrame.contents()[0];
+		doc.open();
+		doc.write(res.responseText);
+		doc.close();
+        $('button').prop({disabled:false});
 	};
 	
 	// call to submit the firstuser
 	var saveFirstUser = function() {
 		$('button').prop({disabled:true});
-		securityConfig.saveFirstUser($('iframe[src]').contents().find('form:not(.no-json)'), handleStaplerSubmit, handleStaplerSubmit);
+		var $form = $('iframe.setup-first-user').contents().find('form:not(.no-json)');
+		securityConfig.saveFirstUser($form, handleFirstUserResponseSuccess, handleFirstUserResponseError);
 	};
 
 	var skipFirstUser = function() {
