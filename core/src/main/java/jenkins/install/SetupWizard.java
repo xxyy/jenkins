@@ -235,18 +235,18 @@ public class SetupWizard extends PageDecorator {
     public HttpResponse doCreateAdminUser(StaplerRequest req, StaplerResponse rsp) throws IOException {
         Jenkins j = Jenkins.getInstance();
         j.checkPermission(Jenkins.ADMINISTER);
-        
+
         // This will be set up by default. if not, something changed, ok to fail
-        HudsonPrivateSecurityRealm securityRealm = (HudsonPrivateSecurityRealm)j.getSecurityRealm();
-        
+        HudsonPrivateSecurityRealm securityRealm = (HudsonPrivateSecurityRealm) j.getSecurityRealm();
+
         User admin = securityRealm.getUser(SetupWizard.initialSetupAdminUserName);
         try {
-            if(admin != null) {
+            if (admin != null) {
                 admin.delete(); // assume the new user may well be 'admin'
             }
-            
-            User u = securityRealm.createAccountFromSetupWizard(req);
-            if(admin != null) {
+
+            User newUser = securityRealm.createAccountFromSetupWizard(req);
+            if (admin != null) {
                 admin = null;
             }
 
@@ -260,9 +260,9 @@ public class SetupWizard extends PageDecorator {
             InstallUtil.proceedToNextStateFrom(InstallState.CREATE_ADMIN_USER);
 
             // ... and then login
-            Authentication a = new UsernamePasswordAuthenticationToken(u.getId(),req.getParameter("password1"));
-            a = securityRealm.getSecurityComponents().manager.authenticate(a);
-            SecurityContextHolder.getContext().setAuthentication(a);
+            Authentication auth = new UsernamePasswordAuthenticationToken(newUser.getId(), req.getParameter("password1"));
+            auth = securityRealm.getSecurityComponents().manager.authenticate(auth);
+            SecurityContextHolder.getContext().setAuthentication(auth);
             CrumbIssuer crumbIssuer = Jenkins.getInstance().getCrumbIssuer();
             JSONObject data = new JSONObject();
             if (crumbIssuer != null) {
@@ -270,10 +270,10 @@ public class SetupWizard extends PageDecorator {
             }
             return HttpResponses.okJSON(data);
         } catch (AccountCreationFailedException e) {
-            rsp.setStatus(400);
+            rsp.setStatus(422); // Unprocessable Entity (WebDAV)
             return HttpResponses.forwardToView(securityRealm, "/jenkins/install/SetupWizard/setupWizardFirstUser.jelly");
         } finally {
-            if(admin != null) {
+            if (admin != null) {
                 admin.save(); // recreate this initial user if something failed
             }
         }

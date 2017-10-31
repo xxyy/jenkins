@@ -885,19 +885,19 @@ var createPluginSetupWizard = function(appendTarget) {
 		// We're expecting a full HTML page to replace the form
 		// We can only replace the _whole_ iframe due to XSS rules
 		// https://stackoverflow.com/a/22913801/1117552
-		var $newFrame = $('<iframe class="setup-first-user"></iframe>');
-		$container.find('iframe.setup-first-user').replaceWith($newFrame);
+		var $newFrame = $('<iframe id="setup-first-user"></iframe>');
+		$container.find('iframe#setup-first-user').replaceWith($newFrame);
 		var doc = $newFrame.contents()[0];
 		doc.open();
 		doc.write(res.responseText);
 		doc.close();
-        $('button').prop({disabled:false});
+		$('button').prop({disabled:false});
 	};
 	
 	// call to submit the firstuser
 	var saveFirstUser = function() {
 		$('button').prop({disabled:true});
-		var $form = $('iframe.setup-first-user').contents().find('form:not(.no-json)');
+		var $form = $('iframe#setup-first-user').contents().find('form:not(.no-json)');
 		securityConfig.saveFirstUser($form, handleFirstUserResponseSuccess, handleFirstUserResponseError);
 	};
 
